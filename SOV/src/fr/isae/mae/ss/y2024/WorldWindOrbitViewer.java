@@ -28,67 +28,39 @@
 package fr.isae.mae.ss.y2024;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.Point;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
-import java.util.List;
-
 import javax.swing.AbstractAction;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
 
-import fr.cnes.sirius.patrius.bodies.BodyShape;
-import fr.cnes.sirius.patrius.bodies.GeodeticPoint;
-import fr.cnes.sirius.patrius.bodies.OneAxisEllipsoid;
-import fr.cnes.sirius.patrius.frames.FactoryManagedFrame;
 import fr.cnes.sirius.patrius.frames.FramesFactory;
-import fr.cnes.sirius.patrius.math.ode.FirstOrderIntegrator;
-import fr.cnes.sirius.patrius.math.ode.nonstiff.ClassicalRungeKuttaIntegrator;
-import fr.cnes.sirius.patrius.orbits.KeplerianOrbit;
-import fr.cnes.sirius.patrius.orbits.Orbit;
-import fr.cnes.sirius.patrius.orbits.OrbitType;
 import fr.cnes.sirius.patrius.orbits.PositionAngle;
-import fr.cnes.sirius.patrius.propagation.SpacecraftState;
-import fr.cnes.sirius.patrius.propagation.numerical.NumericalPropagator;
-import fr.cnes.sirius.patrius.propagation.sampling.PatriusFixedStepHandler;
 import fr.cnes.sirius.patrius.time.AbsoluteDate;
 import fr.cnes.sirius.patrius.utils.Constants;
 import fr.cnes.sirius.patrius.utils.exception.PatriusException;
-import fr.cnes.sirius.patrius.utils.exception.PropagationException;
 import gov.nasa.worldwind.WorldWind;
-import gov.nasa.worldwind.WorldWindow;
-import gov.nasa.worldwind.avlist.AVKey;
 import gov.nasa.worldwind.event.SelectEvent;
 import gov.nasa.worldwind.event.SelectListener;
-import gov.nasa.worldwind.geom.Line;
 import gov.nasa.worldwind.geom.Position;
-import gov.nasa.worldwind.geom.Vec4;
-import gov.nasa.worldwind.globes.Globe;
 import gov.nasa.worldwind.layers.RenderableLayer;
-import gov.nasa.worldwind.render.BasicShapeAttributes;
 import gov.nasa.worldwind.render.Box;
-import gov.nasa.worldwind.render.Material;
-import gov.nasa.worldwind.render.Path;
-import gov.nasa.worldwind.render.PointPlacemark;
-import gov.nasa.worldwind.render.ShapeAttributes;
 import gov.nasa.worldwind.view.orbit.BasicOrbitView;
 import gov.nasa.worldwindx.applications.worldwindow.util.Util;
 import gov.nasa.worldwindx.examples.ApplicationTemplate;
 
 /**
- * This example demonstrates the use of multiple WMS layers, as displayed in a
- * WMSLayersPanel.
+ * This is a satellite orbit viewer that utilizes worldwind and patrius
  *
- * @author tag
- * @version $Id: WMSLayerManager.java 2109 2014-06-30 16:52:38Z tgaskins $
+ * @author Mona Elboughdady
  */
 public class WorldWindOrbitViewer extends ApplicationTemplate {
 
-	/**
-	 * The ContextMenu class implements the context menu.
-	 */
+    /**
+     * Represents a context menu for interacting with satellite objects.
+     */
 	protected static class ContextMenu {
 
 		public static final String CONTEXT_MENU_INFO = "ContextMenuInfo";
@@ -98,6 +70,11 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 		protected JMenuItem menuTitleItem;
 		protected ArrayList<JMenuItem> menuItems = new ArrayList<>();
 
+        /**
+         * Constructs a context menu with the specified component and menu items.
+         * @param sourceComponent The component to which the menu is attached.
+         * @param contextMenuInfo The context menu information including title and items.
+         */
 		public ContextMenu(Component sourceComponent, ContextMenuInfo contextMenuInfo) {
 			this.sourceComponent = sourceComponent;
 			this.ctxMenuInfo = contextMenuInfo;
@@ -106,16 +83,28 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 			this.makeMenuItems();
 		}
 
+        /**
+         * Creates the title item for the context menu.
+         */
 		protected void makeMenuTitle() {
 			this.menuTitleItem = new JMenuItem(this.ctxMenuInfo.menuTitle);
 		}
 
+		
+        /**
+         * Populates the context menu with items.
+         */
 		protected void makeMenuItems() {
 			for (ContextMenuItemInfo itemInfo : this.ctxMenuInfo.menuItems) {
 				this.menuItems.add(new JMenuItem(new ContextMenuItemAction(itemInfo)));
 			}
 		}
 
+		
+        /**
+         * Displays the context menu at the specified screen position.
+         * @param screenPt The screen position where the menu should be shown.
+         */
 		public void show(final Point screenPt) {
 			JPopupMenu popup = new JPopupMenu();
 
@@ -131,9 +120,9 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 		}
 	}
 
-	/**
-	 * The ContextMenuInfo class specifies the contents of the context menu.
-	 */
+    /**
+     * Represents context menu information such as title and items.
+     */
 	protected static class ContextMenuInfo {
 
 		protected String menuTitle;
@@ -183,11 +172,7 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 	 */
 	protected static class ContextMenuController implements SelectListener {
 
-		protected PointPlacemark lastPickedPlacemark = null;
-		private final WorldWindow ww;
-
-		public ContextMenuController(WorldWindow ww) {
-			this.ww = ww;
+		public ContextMenuController() {
 		}
 
 		@Override
@@ -202,71 +187,39 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 			}
 		}
 
+        /**
+         * Displays a context menu when a satellite is clicked.
+         * @param event The selection event triggering the menu.
+         */
 		protected void showContextMenu(SelectEvent event) {
 			if (event.getEventAction().equals(SelectEvent.LEFT_CLICK)) {
 				Object topObject = event.getTopObject();
 
 				// Check if the clicked object is a Path
-				if (topObject instanceof Path) {
-					Path clickedPath = (Path) topObject;
+				if (topObject instanceof Box) {
+					Box clickedSatellite = (Box) topObject;
 
 					// Get the clicked position from the path
-					Position clickedPosition = getClickedPositionOnPath(event, clickedPath);
+					Position clickedPosition = clickedSatellite.getCenterPosition();
 
-					if (clickedPosition != null) {
-						System.out.printf("Clicked Position - Lat: %.6f, Lon: %.6f, Alt: %.2f%n",
-								clickedPosition.getLatitude().degrees, clickedPosition.getLongitude().degrees,
-								clickedPosition.getElevation());
-
-						ContextMenuItemInfo[] infos = {
-								new ContextMenuItemInfo(clickedPosition.getLatitude().toString()),
-								new ContextMenuItemInfo(clickedPosition.getLongitude().toString()),
-								new ContextMenuItemInfo("" + clickedPosition.getAltitude())};
-						ContextMenuInfo ctxInfo = new ContextMenuInfo("Position", infos);
-						ContextMenu menu = new ContextMenu((Component) event.getSource(), ctxInfo);
-						menu.show(event.getPickPoint());
-					} else {
-						System.out.println("No position found on the path for the click.");
-					}
+					ContextMenuItemInfo[] infos = {
+							new ContextMenuItemInfo("Latitude: " + clickedPosition.getLatitude().toString()),
+							new ContextMenuItemInfo("Longitude: " + clickedPosition.getLongitude().toString()),
+							new ContextMenuItemInfo("Altitude: " + clickedPosition.getAltitude()) };
+					ContextMenuInfo ctxInfo = new ContextMenuInfo("Position", infos);
+					ContextMenu menu = new ContextMenu((Component) event.getSource(), ctxInfo);
+					menu.show(event.getPickPoint());
 				}
 			}
 		}
 
-		/**
-		 * Computes the position along the Path that was clicked.
-		 *
-		 * @param event the SelectEvent containing the pick ray.
-		 * @param path  the Path being clicked.
-		 * @return the Position of the click on the path, or null if no intersection is
-		 *         found.
-		 */
-		private Position getClickedPositionOnPath(SelectEvent event, Path path) {
-			Line pickRay = this.ww.getView().computeRayFromScreenPoint(event.getPickPoint().getX(),
-					event.getPickPoint().getY());
-
-			Globe globe = this.ww.getModel().getGlobe();
-			Iterable<? extends Position> positions = path.getPositions();
-
-			Position closestPosition = null;
-			double closestDistance = Double.MAX_VALUE;
-
-			for (Position position : positions) {
-				Vec4 pathPoint = globe.computePointFromPosition(position);
-				Vec4 intersectionPoint = pickRay.nearestPointTo(pathPoint);
-
-				double distance = pathPoint.distanceTo3(intersectionPoint);
-
-				if (distance < closestDistance) {
-					closestDistance = distance;
-					closestPosition = position;
-				}
-			}
-
-			// Return the closest position if it is within a reasonable threshold
-			return closestDistance < 1e5 ? closestPosition : null;
-		}
 	}
 
+	
+    /**
+     * Custom view for orbit visualization multiplies far distance to allow showing complete orbits
+     * without being incorrectly clipped a the "horizon".
+     */
 	public static class CustomOrbitView extends BasicOrbitView {
 
 		@Override
@@ -277,171 +230,116 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 
 	}
 
+    /**
+     * The main application frame for managing and visualizing multiple orbit layers.
+     */
 	protected static class AppFrame extends ApplicationTemplate.AppFrame {
 
 		public AppFrame() throws PatriusException {
 			super(false, false, false);
 
+			// Initialize slider groups and layers
 			OrbitSidePanel orbitSidePanel = new OrbitSidePanel();
 
-			RenderableLayer layer = new RenderableLayer();
-
 			this.getWwd().setView(new CustomOrbitView());
+			RenderableLayer issLayer = new RenderableLayer();
+			issLayer.setName("ISS");
 
-			ContextMenuItemInfo[] itemActionNames = new ContextMenuItemInfo[] { new ContextMenuItemInfo("Do This"),
-					new ContextMenuItemInfo("Do That"), new ContextMenuItemInfo("Do the Other Thing"), };
+			CustomOrbit ISS = new CustomOrbit(Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 415e3, 0.0005931,
+					Math.toRadians(51.6403), Math.toRadians(28.9604), Math.toRadians(57.3420), Math.toRadians(122.7049),
+					PositionAngle.MEAN, FramesFactory.getGCRF(), new AbsoluteDate(), Constants.WGS84_EARTH_MU, "ISS");
+			this.getWwd().getModel().getLayers().add(issLayer);
+			insertBeforeCompass(getWwd(), issLayer);
 
-			layer.setName("Orbit");
+			RenderableLayer nilesatLayer = new RenderableLayer();
+			nilesatLayer.setName("NileSat");
+			
+			CustomOrbit nileSat = new CustomOrbit(Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 35786.5e3, 0.0004911,
+					Math.toRadians(0.0440), Math.toRadians(310.3249), Math.toRadians(359.1397),
+					Math.toRadians(300.3377), PositionAngle.MEAN, FramesFactory.getGCRF(), new AbsoluteDate(),
+					Constants.WGS84_EARTH_MU, "NileSat");
+			this.getWwd().getModel().getLayers().add(nilesatLayer);
+			insertBeforeCompass(getWwd(), nilesatLayer);
 
-			// Method to create the orbit and add the path to the layer
-			Runnable updateOrbitPath = () -> {
-				try {
-					Orbit updatedOrbit = new KeplerianOrbit(
-							Constants.WGS84_EARTH_EQUATORIAL_RADIUS * orbitSidePanel.getSliderAValue(),
-							orbitSidePanel.getSliderEValue(), Math.toRadians(orbitSidePanel.getSliderIValue()),
-							Math.toRadians(orbitSidePanel.getSliderOmegaValue()),
-							Math.toRadians(orbitSidePanel.getSliderUpperOmegaValue()),
-							Math.toRadians(orbitSidePanel.getSliderVValue()), PositionAngle.MEAN,
-							FramesFactory.getGCRF(), new AbsoluteDate(), Constants.WGS84_EARTH_MU);
+			orbitSidePanel.setIssButtonListener(() -> {
+				issLayer.addRenderable(ISS.getPath());
+				issLayer.addRenderable(ISS.getSatellite());
+				this.getWwd().redraw();
+			}, () -> {
+				issLayer.removeAllRenderables();
+			});
 
-					// Create and set an attribute bundle.
-					ShapeAttributes boxAttrs = new BasicShapeAttributes();
-					boxAttrs.setInteriorMaterial(Material.RED);
-					boxAttrs.setInteriorOpacity(1);
-					boxAttrs.setEnableLighting(true);
-					boxAttrs.setOutlineMaterial(Material.RED);
-					boxAttrs.setOutlineWidth(2d);
-					boxAttrs.setDrawInterior(true);
-					boxAttrs.setDrawOutline(false);
+			orbitSidePanel.setNilesatButtonListener(() -> {
+				nilesatLayer.addRenderable(nileSat.getPath());
+				nilesatLayer.addRenderable(nileSat.getSatellite());
+				this.getWwd().redraw();
+			}, () -> {
+				nilesatLayer.removeAllRenderables();
+				this.getWwd().redraw();
+			});
 
-					// Propagate and update path
-					List<GeodeticPoint> points = propagateMyWonderfulOrbit(updatedOrbit);
-					List<Position> positions = glueBetweenPatriusAndWorldwind(points);
+			// Configure add group button to dynamically create orbits and layers
+			orbitSidePanel.getAddGroupButton().addActionListener(e -> {
+				int groupNumber = orbitSidePanel.getSliderGroups().size() + 1;
 
-//					for (Position position: positions) {
-//
-//					}
+				// Create a new layer for the orbit
+				RenderableLayer newLayer = new RenderableLayer();
+				newLayer.setName("Orbit " + groupNumber);
+				this.getWwd().getModel().getLayers().add(newLayer);
 
-					Box satellite2 = new Box(positions.get(0), 150000, 150000, 150000);
-					satellite2.setAltitudeMode(WorldWind.RELATIVE_TO_GROUND);
-					satellite2.setAttributes(boxAttrs);
-					satellite2.setVisible(true);
-					satellite2.setValue(AVKey.DISPLAY_NAME, "Satellite");
+				// Create a new slider group
+				int groupId = orbitSidePanel.addNewGroup();
+				SliderGroup newGroup = orbitSidePanel.getSliderGroups().get(groupNumber - 1);
 
-					// Clear the previous path and add the new one
-					layer.removeAllRenderables();
-					ShapeAttributes attrs = new BasicShapeAttributes();
-					attrs.setOutlineMaterial(new Material(Color.YELLOW));
-					attrs.setOutlineWidth(5.0);
-					attrs.setEnableAntialiasing(true);
+				// Create a new orbit controlled by the new slider group
+				CustomOrbit newOrbit = new CustomOrbit(
+						Constants.WGS84_EARTH_EQUATORIAL_RADIUS * newGroup.getSliderAValue(),
+						newGroup.getSliderEValue(), Math.toRadians(newGroup.getSliderIValue()),
+						Math.toRadians(newGroup.getSliderOmegaValue()),
+						Math.toRadians(newGroup.getSliderUpperOmegaValue()), Math.toRadians(newGroup.getSliderVValue()),
+						PositionAngle.MEAN, FramesFactory.getGCRF(), new AbsoluteDate(), Constants.WGS84_EARTH_MU,
+						"Group " + groupId);
 
-					Path path = new Path(positions);
-					path.setAttributes(attrs);
-					path.setVisible(true);
-					path.setAltitudeMode(WorldWind.RELATIVE_TO_GROUND);
-					path.setPathType(AVKey.GREAT_CIRCLE);
-					path.setValue(ContextMenu.CONTEXT_MENU_INFO, new ContextMenuInfo("Placemark A", itemActionNames));
+				// Create a runnable to update the orbit and link to slider listeners
+				Runnable updateOrbitRunnable = newOrbit.createUpdateRunnable(newGroup, newLayer, getWwd());
+				addRunnables(newGroup, updateOrbitRunnable);
 
-					layer.addRenderable(path);
-					layer.addRenderable(satellite2);
+				// Add delete functionality
+				newGroup.addDeleteButtonListener(event -> {
+					orbitSidePanel.removeGroup(newGroup);
+					newLayer.removeAllRenderables();
+					this.getWwd().getModel().getLayers().remove(newLayer);
+					this.getWwd().redraw();
+				});
 
-					// Force a redraw of the WorldWind canvas
-					getWwd().redraw();
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			};
-
-			// Add listeners to each slider
-			orbitSidePanel.addSliderAListener(e -> updateOrbitPath.run());
-			orbitSidePanel.addSliderEListener(e -> updateOrbitPath.run());
-			orbitSidePanel.addSliderIListener(e -> updateOrbitPath.run());
-			orbitSidePanel.addSliderUpperOmegaListener(e -> updateOrbitPath.run());
-			orbitSidePanel.addSliderOmegaListener(e -> updateOrbitPath.run());
-			orbitSidePanel.addSliderVListener(e -> updateOrbitPath.run());
-
-			// Initial path setup
-			updateOrbitPath.run();
-
-			// Add the layer to the model
-			insertBeforeCompass(getWwd(), layer);
-			ContextMenuController contextMenuController = new ContextMenuController(this.getWwd());
-			getWwd().addSelectListener(contextMenuController);
+				insertBeforeCompass(getWwd(), newLayer);
+			});
 
 			this.getContentPane().add(orbitSidePanel, BorderLayout.WEST);
+
+			ContextMenuController contextMenuController = new ContextMenuController();
+			getWwd().addSelectListener(contextMenuController);
 		}
 
-		/** The orbit propagator */
-		public static List<GeodeticPoint> propagateMyWonderfulOrbit(Orbit iniOrbit) throws PatriusException {
-
-			// We create a spacecratftstate
-			final SpacecraftState iniState = new SpacecraftState(iniOrbit);
-
-			// Initialization of the Runge Kutta integrator with a 2 s step
-			final double pasRk = 2.;
-			final FirstOrderIntegrator integrator = new ClassicalRungeKuttaIntegrator(pasRk);
-
-			// Initialization of the propagator
-			final NumericalPropagator propagator = new NumericalPropagator(integrator);
-			propagator.resetInitialState(iniState);
-
-			// Forcing integration using cartesian equations
-			propagator.setOrbitType(OrbitType.CARTESIAN);
-
-			final FactoryManagedFrame ITRF = FramesFactory.getITRF();
-
-			final BodyShape EARTH = new OneAxisEllipsoid(Constants.WGS84_EARTH_EQUATORIAL_RADIUS,
-					Constants.WGS84_EARTH_FLATTENING, ITRF);
-			// SPECIFIC
-			// Creation of a fixed step handler
-			final ArrayList<GeodeticPoint> listOfStates = new ArrayList<>();
-			PatriusFixedStepHandler myStepHandler = new PatriusFixedStepHandler() {
-				private static final long serialVersionUID = 1L;
-
-				public void init(SpacecraftState s0, AbsoluteDate t) {
-					// Nothing to do ...
-				}
-
-				/** The step handler used to store every point */
-				public void handleStep(SpacecraftState currentState, boolean isLast) throws PropagationException {
-
-					GeodeticPoint geodeticPoint;
-					try {
-						geodeticPoint = EARTH.transform(currentState.getPVCoordinates().getPosition(), ITRF,
-								currentState.getDate());
-					} catch (PatriusException e) {
-						throw new PropagationException(e);
-					}
-					// Adding S/C to the list
-					listOfStates.add(geodeticPoint);
-				}
-			};
-			// The handler frequency is set to 10S
-			propagator.setMasterMode(10., myStepHandler);
-			// SPECIFIC
-
-			// Propagating 100s
-			final double dt = iniOrbit.getKeplerianPeriod();
-			final AbsoluteDate finalDate = iniOrbit.getDate().shiftedBy(dt);
-			final SpacecraftState finalState = propagator.propagate(finalDate);
-
-			return listOfStates;
-
-		}
-
-		/** This method maps the points of Patrius to positions of WorldWind */
-		public static List<Position> glueBetweenPatriusAndWorldwind(List<GeodeticPoint> points) {
-			List<Position> positions = new ArrayList<Position>(points.size());
-			for (GeodeticPoint point : points) {
-				positions.add(Position.fromRadians(point.getLatitude(), point.getLongitude(), point.getAltitude()));
-			}
-			return positions;
-
+		private void addRunnables(SliderGroup group, Runnable runnable) {
+			group.addSliderAListener(event -> runnable.run());
+			group.addSliderEListener(event -> runnable.run());
+			group.addSliderIListener(event -> runnable.run());
+			group.addSliderOmegaListener(event -> runnable.run());
+			group.addSliderUpperOmegaListener(event -> runnable.run());
+			group.addSliderVListener(event -> runnable.run());
 		}
 
 	}
 
+    /**
+     * The main method initializes the WorldWind application.
+     * @param args Command-line arguments.
+     */
 	public static void main(String[] args) {
+        System.setProperty("sun.java2d.uiScale", "1.0");
+        System.setProperty("prism.allowhidpi", "false");
+        System.setProperty("jogamp.gluegen.system.dont.use.native.awt", "false");
 		WorldWind.setOfflineMode(true);
 		ApplicationTemplate.start("Mona's Wonderful Orbit Displayer", AppFrame.class);
 	}
