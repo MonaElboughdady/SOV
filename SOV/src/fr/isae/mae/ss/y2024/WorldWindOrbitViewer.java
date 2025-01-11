@@ -30,12 +30,12 @@ package fr.isae.mae.ss.y2024;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Point;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
 import javax.swing.AbstractAction;
 import javax.swing.JMenuItem;
 import javax.swing.JPopupMenu;
-
 
 import fr.cnes.sirius.patrius.frames.FramesFactory;
 import fr.cnes.sirius.patrius.orbits.PositionAngle;
@@ -43,11 +43,16 @@ import fr.cnes.sirius.patrius.time.AbsoluteDate;
 import fr.cnes.sirius.patrius.utils.Constants;
 import fr.cnes.sirius.patrius.utils.exception.PatriusException;
 import gov.nasa.worldwind.WorldWind;
+import gov.nasa.worldwind.WorldWindow;
 import gov.nasa.worldwind.event.SelectEvent;
 import gov.nasa.worldwind.event.SelectListener;
+import gov.nasa.worldwind.geom.Line;
 import gov.nasa.worldwind.geom.Position;
+import gov.nasa.worldwind.geom.Vec4;
+import gov.nasa.worldwind.globes.Globe;
 import gov.nasa.worldwind.layers.RenderableLayer;
 import gov.nasa.worldwind.render.Box;
+import gov.nasa.worldwind.render.Path;
 import gov.nasa.worldwind.view.orbit.BasicOrbitView;
 import gov.nasa.worldwindx.applications.worldwindow.util.Util;
 import gov.nasa.worldwindx.examples.ApplicationTemplate;
@@ -59,9 +64,9 @@ import gov.nasa.worldwindx.examples.ApplicationTemplate;
  */
 public class WorldWindOrbitViewer extends ApplicationTemplate {
 
-    /**
-     * Represents a context menu for interacting with satellite objects.
-     */
+	/**
+	 * Represents a context menu for interacting with satellite objects.
+	 */
 	protected static class ContextMenu {
 
 		public static final String CONTEXT_MENU_INFO = "ContextMenuInfo";
@@ -71,11 +76,13 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 		protected JMenuItem menuTitleItem;
 		protected ArrayList<JMenuItem> menuItems = new ArrayList<>();
 
-        /**
-         * Constructs a context menu with the specified component and menu items.
-         * @param sourceComponent The component to which the menu is attached.
-         * @param contextMenuInfo The context menu information including title and items.
-         */
+		/**
+		 * Constructs a context menu with the specified component and menu items.
+		 * 
+		 * @param sourceComponent The component to which the menu is attached.
+		 * @param contextMenuInfo The context menu information including title and
+		 *                        items.
+		 */
 		public ContextMenu(Component sourceComponent, ContextMenuInfo contextMenuInfo) {
 			this.sourceComponent = sourceComponent;
 			this.ctxMenuInfo = contextMenuInfo;
@@ -84,28 +91,27 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 			this.makeMenuItems();
 		}
 
-        /**
-         * Creates the title item for the context menu.
-         */
+		/**
+		 * Creates the title item for the context menu.
+		 */
 		protected void makeMenuTitle() {
 			this.menuTitleItem = new JMenuItem(this.ctxMenuInfo.menuTitle);
 		}
 
-		
-        /**
-         * Populates the context menu with items.
-         */
+		/**
+		 * Populates the context menu with items.
+		 */
 		protected void makeMenuItems() {
 			for (ContextMenuItemInfo itemInfo : this.ctxMenuInfo.menuItems) {
 				this.menuItems.add(new JMenuItem(new ContextMenuItemAction(itemInfo)));
 			}
 		}
 
-		
-        /**
-         * Displays the context menu at the specified screen position.
-         * @param screenPt The screen position where the menu should be shown.
-         */
+		/**
+		 * Displays the context menu at the specified screen position.
+		 * 
+		 * @param screenPt The screen position where the menu should be shown.
+		 */
 		public void show(final Point screenPt) {
 			JPopupMenu popup = new JPopupMenu();
 
@@ -121,9 +127,9 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 		}
 	}
 
-    /**
-     * Represents context menu information such as title and items.
-     */
+	/**
+	 * Represents context menu information such as title and items.
+	 */
 	protected static class ContextMenuInfo {
 
 		protected String menuTitle;
@@ -172,8 +178,10 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 	 * item or shows its context menu.
 	 */
 	protected static class ContextMenuController implements SelectListener {
+		private final WorldWindow ww;
 
-		public ContextMenuController() {
+		public ContextMenuController(WorldWindow ww) {
+			this.ww = ww;
 		}
 
 		@Override
@@ -188,39 +196,91 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 			}
 		}
 
-        /**
-         * Displays a context menu when a satellite is clicked.
-         * @param event The selection event triggering the menu.
-         */
+		/**
+		 * Displays a context menu when a satellite is clicked.
+		 * 
+		 * @param event The selection event triggering the menu.
+		 */
 		protected void showContextMenu(SelectEvent event) {
 			if (event.getEventAction().equals(SelectEvent.LEFT_CLICK)) {
 				Object topObject = event.getTopObject();
 
 				// Check if the clicked object is a Path
-				if (topObject instanceof Box) {
-					Box clickedSatellite = (Box) topObject;
+				if (topObject instanceof Path) {
+					Path clickedPath = (Path) topObject;
 
 					// Get the clicked position from the path
-					Position clickedPosition = clickedSatellite.getCenterPosition();
+					Position clickedPathPosition = getClickedPositionOnPath(event, clickedPath);
 
-					ContextMenuItemInfo[] infos = {
-							new ContextMenuItemInfo("Latitude: " + clickedPosition.getLatitude().toString()),
-							new ContextMenuItemInfo("Longitude: " + clickedPosition.getLongitude().toString()),
-							new ContextMenuItemInfo("Altitude: " + clickedPosition.getAltitude()) };
-					ContextMenuInfo ctxInfo = new ContextMenuInfo("Position", infos);
-					ContextMenu menu = new ContextMenu((Component) event.getSource(), ctxInfo);
-					menu.show(event.getPickPoint());
+					if (clickedPathPosition != null) {
+						ContextMenuItemInfo[] infosPath = {
+								new ContextMenuItemInfo(clickedPathPosition.getLatitude().toString()),
+								new ContextMenuItemInfo(clickedPathPosition.getLongitude().toString()),
+								new ContextMenuItemInfo("" + clickedPathPosition.getAltitude()) };
+						ContextMenuInfo ctxInfoPath = new ContextMenuInfo("Position", infosPath);
+						ContextMenu menuPath = new ContextMenu((Component) event.getSource(), ctxInfoPath);
+						menuPath.show(event.getPickPoint());
+					}
+
+					// Check if the clicked object is a Path
+					if (topObject instanceof Box) {
+						Box clickedSatellite = (Box) topObject;
+
+						// Get the clicked position from the path
+						Position clickedPosition = clickedSatellite.getCenterPosition();
+
+						ContextMenuItemInfo[] infos = {
+								new ContextMenuItemInfo("Latitude: " + clickedPosition.getLatitude().toString()),
+								new ContextMenuItemInfo("Longitude: " + clickedPosition.getLongitude().toString()),
+								new ContextMenuItemInfo("Altitude: " + clickedPosition.getAltitude()) };
+						ContextMenuInfo ctxInfo = new ContextMenuInfo("Position", infos);
+						ContextMenu menu = new ContextMenu((Component) event.getSource(), ctxInfo);
+						menu.show(event.getPickPoint());
+					}
 				}
 			}
+
 		}
 
+		/**
+		 * Computes the position along the Path that was clicked.
+		 *
+		 * @param event the SelectEvent containing the pick ray.
+		 * @param path  the Path being clicked.
+		 * @return the Position of the click on the path, or null if no intersection is
+		 *         found.
+		 */
+		private Position getClickedPositionOnPath(SelectEvent event, Path path) {
+			Line pickRay = this.ww.getView().computeRayFromScreenPoint(event.getPickPoint().getX(),
+					event.getPickPoint().getY());
+
+			Globe globe = this.ww.getModel().getGlobe();
+			Iterable<? extends Position> positions = path.getPositions();
+
+			Position closestPosition = null;
+			double closestDistance = Double.MAX_VALUE;
+
+			for (Position position : positions) {
+				Vec4 pathPoint = globe.computePointFromPosition(position);
+				Vec4 intersectionPoint = pickRay.nearestPointTo(pathPoint);
+
+				double distance = pathPoint.distanceTo3(intersectionPoint);
+
+				if (distance < closestDistance) {
+					closestDistance = distance;
+					closestPosition = position;
+				}
+			}
+
+			// Return the closest position if it is within a reasonable threshold
+			return closestDistance < 1e5 ? closestPosition : null;
+		}
 	}
 
-	
-    /**
-     * Custom view for orbit visualization multiplies far distance to allow showing complete orbits
-     * without being incorrectly clipped a the "horizon".
-     */
+	/**
+	 * Custom view for orbit visualization multiplies far distance to allow showing
+	 * complete orbits without being incorrectly clipped a the "horizon".
+	 */
 	public static class CustomOrbitView extends BasicOrbitView {
 
 		@Override
@@ -231,9 +291,10 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 
 	}
 
-    /**
-     * The main application frame for managing and visualizing multiple orbit layers.
-     */
+	/**
+	 * The main application frame for managing and visualizing multiple orbit
+	 * layers.
+	 */
 	protected static class AppFrame extends ApplicationTemplate.AppFrame {
 
 		public AppFrame() throws PatriusException {
@@ -254,7 +315,7 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 
 			RenderableLayer nilesatLayer = new RenderableLayer();
 			nilesatLayer.setName("NileSat");
-			
+
 			CustomOrbit nileSat = new CustomOrbit(Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 35786.5e3, 0.0004911,
 					Math.toRadians(0.0440), Math.toRadians(310.3249), Math.toRadians(359.1397),
 					Math.toRadians(300.3377), PositionAngle.MEAN, FramesFactory.getGCRF(), new AbsoluteDate(),
@@ -318,7 +379,7 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 
 			this.getContentPane().add(orbitSidePanel, BorderLayout.WEST);
 
-			ContextMenuController contextMenuController = new ContextMenuController();
+			ContextMenuController contextMenuController = new ContextMenuController(this.getWwd());
 			getWwd().addSelectListener(contextMenuController);
 		}
 
@@ -333,14 +394,15 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 
 	}
 
-    /**
-     * The main method initializes the WorldWind application.
-     * @param args Command-line arguments.
-     */
+	/**
+	 * The main method initializes the WorldWind application.
+	 * 
+	 * @param args Command-line arguments.
+	 */
 	public static void main(String[] args) {
-        System.setProperty("sun.java2d.uiScale", "1.0");
-        System.setProperty("prism.allowhidpi", "false");
-        System.setProperty("jogamp.gluegen.system.dont.use.native.awt", "false");
+		System.setProperty("sun.java2d.uiScale", "1.0");
+		System.setProperty("prism.allowhidpi", "false");
+		System.setProperty("jogamp.gluegen.system.dont.use.native.awt", "false");
 		WorldWind.setOfflineMode(true);
 		ApplicationTemplate.start("Mona's Wonderful Orbit Displayer", AppFrame.class);
 	}

@@ -9,6 +9,7 @@ import org.junit.Before;
 import org.junit.Test;
 import javax.swing.*;
 
+import gov.nasa.worldwind.awt.WorldWindowGLCanvas;
 import gov.nasa.worldwind.event.SelectEvent;
 import gov.nasa.worldwind.layers.RenderableLayer;
 import gov.nasa.worldwind.pick.PickedObject;
@@ -118,7 +119,7 @@ public class WorldWindOrbitViewerTest {
     @Test
     public void testShowContextMenu() {
         // Create a dummy SelectEvent with a Box object
-        WorldWindOrbitViewer.ContextMenuController controller = new WorldWindOrbitViewer.ContextMenuController();
+        WorldWindOrbitViewer.ContextMenuController controller = new WorldWindOrbitViewer.ContextMenuController(new WorldWindowGLCanvas());
         
         Box testBox = new Box(gov.nasa.worldwind.geom.Position.fromDegrees(0, 0, 100), 100, 100, 100);
         PickedObject pickedObj = new PickedObject(0, testBox);
