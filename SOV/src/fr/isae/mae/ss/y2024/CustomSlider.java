@@ -19,10 +19,17 @@ import javax.swing.JTextField;
  */
 public class CustomSlider extends JPanel {
 	
+    /** The slider component for adjusting the value. */
     private final JSlider slider;
+
+    /** The text field for displaying and manually entering the slider value. */
     private final JTextField textField;
+
+    /** The scaling factor used to convert the slider's integer values to floating-point values. */
     private final double scale;
-	private JLabel label;
+
+    /** The label describing the purpose of the slider. */
+    private JLabel label;
 
 	/**
 	 * Constructs a CustomSlider with the specified range, initial value, scale, and
@@ -93,6 +100,8 @@ public class CustomSlider extends JPanel {
     /**
      * Adds a listener that triggers when the slider value changes.
      * @param listener the listener to be triggered on value change.
+     *                 The {@code onValueChanged} method of the listener will be called with the updated value 
+     *                 whenever the slider value is adjusted.
      */
     public void addSliderValueChangeListener(SliderValueChangeListener listener) {
         slider.addChangeListener(e -> listener.onValueChanged(getValue()));

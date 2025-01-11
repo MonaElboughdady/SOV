@@ -13,10 +13,8 @@ import gov.nasa.worldwind.event.SelectEvent;
 import gov.nasa.worldwind.layers.RenderableLayer;
 import gov.nasa.worldwind.pick.PickedObject;
 import gov.nasa.worldwind.pick.PickedObjectList;
-import gov.nasa.worldwind.render.Path;
 import gov.nasa.worldwind.render.Box;
 import fr.cnes.sirius.patrius.utils.exception.PatriusException;
-import fr.cnes.sirius.patrius.utils.exception.PropagationException;
 
 public class WorldWindOrbitViewerTest {
 
@@ -133,6 +131,26 @@ public class WorldWindOrbitViewerTest {
         
         // Verify context menu creation by checking the console output or indirectly through context setup
         assertTrue("The event should be processed when a Box is clicked.", mockEvent.getEventAction().equals(SelectEvent.LEFT_CLICK));
+    }
+    
+    @Test
+    public void verifyIssLocation() {
+        OrbitSidePanel sidePanel = (OrbitSidePanel) appFrame.getContentPane().getComponent(1);
+        JPanel quickAddPanel = (JPanel) sidePanel.getComponent(0);
+        JToggleButton issButton = (JToggleButton) quickAddPanel.getComponent(2);
+
+        issButton.doClick();
+
+        RenderableLayer issLayer = (RenderableLayer) appFrame.getWwd().getModel().getLayers().stream()
+                .filter(layer -> layer.getName().equals("ISS"))
+                .findFirst().orElse(null);
+        
+        
+        assertNotNull("ISS layer should be present after toggle.", issLayer);
+        assertFalse("ISS layer should contain renderables.", issLayer.getNumRenderables() == 0);
+
+        issButton.doClick();
+        assertTrue("ISS layer should be empty after untoggle.", issLayer.getNumRenderables() == 0);
     }
     
 }

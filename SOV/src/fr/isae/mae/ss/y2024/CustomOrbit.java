@@ -41,19 +41,46 @@ import fr.cnes.sirius.patrius.utils.exception.PropagationException;
  * It provides methods for creating, propagating, and rendering an orbit, including paths and satellite representations.
  */
 public class CustomOrbit {
-	// Propagate and update path
-	private List<GeodeticPoint> points;
-	private List<Position> positions;
-	private KeplerianOrbit orbit;
-	private Path path;
-	private Box satellite;
-	private ShapeAttributes pathAttrs;
-	private ShapeAttributes boxAttrs;
-	private String displayName;
 
-    /**
-     * Constructs a CustomOrbit instance with the specified orbital parameters.
-     */
+    /** List of geodetic points representing the orbit trajectory. */
+    private List<GeodeticPoint> points;
+
+    /** List of WorldWind positions used for rendering the orbit path. */
+    private List<Position> positions;
+
+    /** The Keplerian orbit representing the orbital parameters of the object. */
+    private KeplerianOrbit orbit;
+
+    /** The graphical path representing the orbit trajectory in the WorldWind environment. */
+    private Path path;
+
+    /** The satellite representation as a 3D box rendered in WorldWind. */
+    private Box satellite;
+
+    /** Attributes for styling the orbit path, including color and line width. */
+    private ShapeAttributes pathAttrs;
+
+    /** Attributes for styling the satellite box, including color, lighting, and visibility. */
+    private ShapeAttributes boxAttrs;
+
+    /** The display name of the orbit, used for identification in the WorldWind UI. */
+    private String displayName;
+
+	/**
+	 * Constructs a CustomOrbit instance with the specified orbital parameters.
+	 *
+	 * @param a             The semi-major axis of the orbit, in meters.
+	 * @param e             The eccentricity of the orbit (0 for circular, closer to 1 for elliptical).
+	 * @param i             The inclination of the orbit, in radians.
+	 * @param pa            The argument of perigee, in radians.
+	 * @param raan          The right ascension of ascending node (RAAN), in radians.
+	 * @param anomaly       The true anomaly or mean anomaly of the orbit, in radians.
+	 * @param type          The type of position angle (e.g., true, mean, eccentric).
+	 * @param frame         The reference frame for the orbit (e.g., GCRF, ITRF).
+	 * @param date          The epoch date for the orbital elements.
+	 * @param mu            The standard gravitational parameter for the central body, in m^3/s^2.
+	 * @param displayName   A display name for the orbit, used for visualization.
+	 */
 	CustomOrbit(final double a, final double e, final double i, final double pa, final double raan,
 			final double anomaly, final PositionAngle type, final Frame frame, final AbsoluteDate date,
 			final double mu, final String displayName) {
@@ -80,16 +107,20 @@ public class CustomOrbit {
 
 	}
 
-    /**
-     * Propagates the orbit and returns a list of geodetic points representing the trajectory.
-     */
+	/**
+	 * Propagates the orbit and returns a list of geodetic points representing the trajectory.
+	 *
+	 * @param iniOrbit The initial orbit to be propagated.
+	 * @return A list of geodetic points representing the propagated orbit's trajectory.
+	 * @throws PatriusException If an error occurs during the orbit propagation or coordinate transformation.
+	 */
 	private static List<GeodeticPoint> propagateOrbit(Orbit iniOrbit) throws PatriusException {
 
 		// We create a spacecratftstate
 		final SpacecraftState iniState = new SpacecraftState(iniOrbit);
 
 		// Initialization of the Runge Kutta integrator with a 2 s step
-		final double pasRk = 2.;
+		final double pasRk = 0.05;
 		final FirstOrderIntegrator integrator = new ClassicalRungeKuttaIntegrator(pasRk);
 
 		// Initialization of the propagator
@@ -140,7 +171,12 @@ public class CustomOrbit {
 
 	}
 
-	/** This method maps the points of Patrius to positions of WorldWind */
+	/**
+	 * Converts a list of geodetic points from the Patrius library into WorldWind Position objects.
+	 *
+	 * @param points The list of geodetic points representing the satellite's trajectory.
+	 * @return A list of WorldWind Position objects corresponding to the provided geodetic points.
+	 */
 	private static List<Position> glueBetweenPatriusAndWorldwind(List<GeodeticPoint> points) {
 		List<Position> positions = new ArrayList<Position>(points.size());
 		for (GeodeticPoint point : points) {
@@ -150,9 +186,21 @@ public class CustomOrbit {
 
 	}
 
-    /**
-     * Updates the orbital parameters and redraws the orbit visualization.
-     */
+	/**
+	 * Updates the orbital parameters and redraws the orbit visualization using the provided values.
+	 *
+	 * @param a             Semi-major axis of the orbit in meters.
+	 * @param e             Eccentricity of the orbit, a unitless value (0 for circular orbits).
+	 * @param i             Inclination of the orbit in radians (angle between the orbital plane and the equatorial plane).
+	 * @param pa            Argument of perigee in radians (angle from ascending node to perigee).
+	 * @param raan          Right Ascension of Ascending Node (RAAN) in radians (angle from reference direction to ascending node).
+	 * @param anomaly       True anomaly or mean anomaly in radians (current position of the satellite in the orbit).
+	 * @param type          The type of anomaly used (e.g., Mean, True, Eccentric).
+	 * @param frame         The reference frame used for the orbit (e.g., GCRF).
+	 * @param date          The reference date of the orbital parameters.
+	 * @param mu            Standard gravitational parameter of the central body in m^3/s^2 (e.g., Earth's gravitational constant).
+	 * @param displayName   The name to be displayed on the orbit visualization.
+	 */
 	public void updateOrbit(final double a, final double e, final double i, final double pa, final double raan,
 			final double anomaly, final PositionAngle type, final Frame frame, final AbsoluteDate date,
 			final double mu, String displayName) {
@@ -180,6 +228,19 @@ public class CustomOrbit {
 		this.satellite.setValue(AVKey.DISPLAY_NAME, displayName);
 	}
 	
+	/**
+	 * Creates a runnable task that updates the orbit and redraws the visualization
+	 * based on the current values of the provided slider group.
+	 *
+	 * The task updates the orbital parameters using the current values of the sliders
+	 * and refreshes the graphical representation of the orbit on the specified layer and
+	 * WorldWindow instance.
+	 *
+	 * @param sliderGroup  The {@link SliderGroup} containing the orbital parameter sliders.
+	 * @param layer        The {@link RenderableLayer} where the orbit visualization will be updated.
+	 * @param wwd          The {@link WorldWindow} instance responsible for rendering the graphical representation.
+	 * @return A {@link Runnable} task that updates the orbit visualization when executed.
+	 */
 	public Runnable createUpdateRunnable(SliderGroup sliderGroup, RenderableLayer layer, WorldWindow wwd) {
 	    return () -> {
 	        updateOrbit(
@@ -204,9 +265,12 @@ public class CustomOrbit {
 	    };
 	}
 
-    /**
-     * Generates a random color for the orbit path.
-     */
+	/**
+	 * Generates a random color for the orbit path.
+	 * The color is generated using random RGB values.
+	 *
+	 * @return A randomly generated {@link Color} object.
+	 */
 	private Color generateRandomColor() {
 	    Random random = new Random();
 	    return new Color(random.nextInt(256), random.nextInt(256), random.nextInt(256));
@@ -226,5 +290,9 @@ public class CustomOrbit {
      */
 	public Box getSatellite() {
 		return satellite;
+	}
+
+	public List<GeodeticPoint> getPoints() {
+		return points;
 	}
 }
