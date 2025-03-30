@@ -5,7 +5,6 @@ import static org.junit.Assert.*;
 import org.junit.Before;
 import org.junit.Test;
 
-
 import fr.cnes.sirius.patrius.bodies.GeodeticPoint;
 import fr.cnes.sirius.patrius.frames.FramesFactory;
 import fr.cnes.sirius.patrius.orbits.PositionAngle;
@@ -20,7 +19,6 @@ public class CustomOrbitTest {
 
 	private CustomOrbit customOrbit;
 
-
 	@Before
 	public void setup() {
 		customOrbit = new CustomOrbit(Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 500000, 0.01, Math.toRadians(45),
@@ -30,12 +28,16 @@ public class CustomOrbitTest {
 
 	@Test
 	public void testInitialValues() {
+		// Description: Verifies that the orbit is properly initialized and all
+		// necessary components are created.
 		assertNotNull(customOrbit.getPath());
 		assertNotNull(customOrbit.getSatellite());
 	}
 
 	@Test
 	public void testUpdateOrbit() {
+		// Description: Tests if updating the orbit parameters successfully changes the
+		// orbit's properties and retains valid data.
 		customOrbit.updateOrbit(Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 700000, 0.02, Math.toRadians(30),
 				Math.toRadians(100), Math.toRadians(50), Math.toRadians(20), PositionAngle.MEAN,
 				FramesFactory.getGCRF(), new AbsoluteDate(), Constants.WGS84_EARTH_MU, "UpdatedOrbit");
@@ -47,6 +49,8 @@ public class CustomOrbitTest {
 
 	@Test
 	public void testCreateUpdateRunnable() {
+		// Description: Verifies that a runnable is correctly created for orbit updates
+		// and that it properly updates the renderable layer when executed.
 		SliderGroup sliderGroup = new SliderGroup("TestGroup", 1.0, 0.01, 30.0, 120.0, 75.0, 30.0);
 		RenderableLayer layer = new RenderableLayer();
 		WorldWindow wwd = new WorldWindowGLCanvas();
@@ -61,6 +65,7 @@ public class CustomOrbitTest {
 
 	@Test
 	public void testRandomColorGeneration() {
+		// Description: Ensures that each CustomOrbit instance generates a unique random color for its path material.
 		CustomOrbit orbit1 = new CustomOrbit(Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 500000, 0.01, Math.toRadians(45),
 				Math.toRadians(120), Math.toRadians(75), Math.toRadians(30), PositionAngle.MEAN,
 				FramesFactory.getGCRF(), new AbsoluteDate(), Constants.WGS84_EARTH_MU, "TestOrbit");
@@ -75,7 +80,8 @@ public class CustomOrbitTest {
 
 	@Test
 	public void testISSWithActualData() {
-
+        // Description: Verifies that the ISS orbit matches real-life data for latitude, longitude, and altitude
+        // within specified tolerances.
 		CustomOrbit ISS = new CustomOrbit(Constants.WGS84_EARTH_EQUATORIAL_RADIUS + 35811e3, 0.0005334,
 				Math.toRadians(0.0484), Math.toRadians(326.2614), Math.toRadians(343.2478), Math.toRadians(295.4036),
 				PositionAngle.MEAN, FramesFactory.getGCRF(), new AbsoluteDate(), Constants.WGS84_EARTH_MU, "ISS");

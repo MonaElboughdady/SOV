@@ -404,6 +404,6 @@ public class WorldWindOrbitViewer extends ApplicationTemplate {
 		System.setProperty("prism.allowhidpi", "false");
 		System.setProperty("jogamp.gluegen.system.dont.use.native.awt", "false");
 		WorldWind.setOfflineMode(true);
-		ApplicationTemplate.start("Mona's Wonderful Orbit Displayer", AppFrame.class);
+		ApplicationTemplate.start("Moon Orbit Viewer", AppFrame.class);
 	}
 }

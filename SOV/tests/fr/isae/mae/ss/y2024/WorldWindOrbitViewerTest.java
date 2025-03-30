@@ -28,6 +28,7 @@ public class WorldWindOrbitViewerTest {
     
     @Test
     public void testAddNewGroupAndOrbit() {
+    	// Validates that a new group can be added via the "Add Group" button in the
     	OrbitSidePanel orbitSidePanel = (OrbitSidePanel) appFrame.getContentPane().getComponent(1);
         int initialGroupCount = orbitSidePanel.getSliderGroups().size();
 
@@ -41,6 +42,7 @@ public class WorldWindOrbitViewerTest {
 
     @Test
     public void testIssButtonToggle() {
+    	// Ensures the ISS toggle button works correctly and modifies the associated
         OrbitSidePanel sidePanel = (OrbitSidePanel) appFrame.getContentPane().getComponent(1);
         JPanel quickAddPanel = (JPanel) sidePanel.getComponent(0);
         JToggleButton issButton = (JToggleButton) quickAddPanel.getComponent(2);
@@ -61,6 +63,7 @@ public class WorldWindOrbitViewerTest {
 
     @Test
     public void testNilesatButtonToggle() {
+    	// Similar to testIssButtonToggle but for the NileSat button.
         OrbitSidePanel sidePanel = (OrbitSidePanel) appFrame.getContentPane().getComponent(1);
         JPanel quickAddPanel = (JPanel) sidePanel.getComponent(0);
         JToggleButton nilesatButton = (JToggleButton) quickAddPanel.getComponent(0);
@@ -80,6 +83,7 @@ public class WorldWindOrbitViewerTest {
     
     @Test
     public void testContextMenuCreation() {
+    	// Validates the creation of a context menu with the correct number of items.
         Component dummyComponent = new JPanel();
         WorldWindOrbitViewer.ContextMenu contextMenu = new WorldWindOrbitViewer.ContextMenu(
             dummyComponent,
@@ -98,6 +102,7 @@ public class WorldWindOrbitViewerTest {
     
     @Test
     public void testContextMenuItemAction() {
+    	// Confirms that an action associated with a context menu item is executed properly.
         boolean[] actionTriggered = {false};
 
         WorldWindOrbitViewer.ContextMenuItemInfo testItem =
@@ -118,6 +123,7 @@ public class WorldWindOrbitViewerTest {
     
     @Test
     public void testShowContextMenu() {
+    	// Ensures a context menu is displayed correctly when interacting with a selectable object (like a Box).
         // Create a dummy SelectEvent with a Box object
         WorldWindOrbitViewer.ContextMenuController controller = new WorldWindOrbitViewer.ContextMenuController(new WorldWindowGLCanvas());
         
@@ -136,6 +142,7 @@ public class WorldWindOrbitViewerTest {
     
     @Test
     public void verifyIssLocation() {
+    	// Validates the rendering of the ISS layer and its behavior upon toggling.
         OrbitSidePanel sidePanel = (OrbitSidePanel) appFrame.getContentPane().getComponent(1);
         JPanel quickAddPanel = (JPanel) sidePanel.getComponent(0);
         JToggleButton issButton = (JToggleButton) quickAddPanel.getComponent(2);
